@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ระบบเติมชื่อเชิญเข้าเรียน — โรงเรียนบวรหัสดินทรวงศ์</title>
+  <meta name="description" content="พิมพ์ชื่อ-สกุล แล้วสร้างภาพบัตรเชิญเข้าเรียนของโรงเรียนบวรหัสดินทรวงศ์ พร้อมดาวน์โหลดได้ทันที" />
+  <style>
+    /* ====== ฟอนต์ ====== 
+       1) วางไฟล์ฟอนต์ JS chanok.ttf ไว้ในโฟลเดอร์เดียวกับไฟล์นี้ และตั้งชื่อไฟล์เป็น JSchanok.ttf
+       2) วางภาพพื้นหลังเชิญเข้าเรียนเป็นไฟล์ bg.jpg (จากภาพตัวอย่างของผู้ใช้)
+       3) วางโลโก้โรงเรียนเป็น logo.png (ใช้สำหรับหัวเว็บเท่านั้น ไม่พิมพ์ทับลงในภาพเชิญ) */
+    @font-face {
+      font-family: 'JS Chanok';
+      src: url('./JSchanok.ttf') format('truetype');
+      font-display: swap;
+    }
+
+    :root{
+      --brand:#7a5230; /* โทนสีน้ำตาลทองสุภาพ */
+      --ink:#3b2b2b;   /* สีตัวอักษรบนภาพ */
+      --bg:#f7f3ec;    /* สีพื้นหลังเว็บ */
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,"Noto Sans Thai",sans-serif;
+      background:linear-gradient(180deg,#f8f5ef, #efe7da);
+      color:#1f2937;
+    }
+    header{
+      position:sticky; top:0; z-index:10;
+      background:rgba(255,255,255,.7); backdrop-filter:saturate(160%) blur(8px);
+      border-bottom:1px solid #e5dac6;
+    }
+    .wrap{max-width:1100px; margin:0 auto; padding:18px 16px;}
+    .brand{display:flex; gap:12px; align-items:center}
+    .brand img{width:44px; height:44px; object-fit:contain; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,.08)}
+    .brand h1{margin:0; font-size:20px; line-height:1.2}
+    .brand small{display:block; color:#6b7280; font-weight:500}
+
+    main{padding:24px 16px}
+    .grid{
+      display:grid; grid-template-columns: 1.1fr .9fr; gap:22px;
+    }
+    @media (max-width: 980px){ .grid{grid-template-columns:1fr} }
+
+    .card{
+      background:#fff; border:1px solid #eadfcd; border-radius:18px; padding:18px; box-shadow:0 10px 30px rgba(122,82,48,.08);
+    }
+    .card h2{margin:0 0 12px 0; color:var(--brand); font-size:18px}
+
+    label{display:block; font-weight:600; margin:8px 0 6px}
+    input[type="text"]{
+      width:100%; padding:12px 14px; border:1px solid #dccdb3; border-radius:12px; font-size:18px;
+      outline:none; transition:.2s; background:#fcfaf6;
+    }
+    input[type="text"]:focus{border-color:#c3a06e; box-shadow:0 0 0 4px rgba(195,160,110,.15)}
+
+    .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+    .row > div{flex:1}
+
+    input[type="range"]{width:100%}
+    .hint{font-size:12px; color:#6b7280}
+
+    .btns{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
+    button{
+      border:none; padding:12px 16px; border-radius:12px; font-weight:700; cursor:pointer; transition:.2s; 
+    }
+    .btn-primary{background:var(--brand); color:#fff}
+    .btn-primary:hover{filter:brightness(1.05)}
+    .btn-ghost{background:#fff; border:1px solid #e0d6c6}
+
+    canvas{width:100%; height:auto; display:block; border-radius:14px; border:1px solid #eadfcd; background:#fff}
+    .small{font-size:13px; color:#6b7280}
+    footer{padding:24px 16px; text-align:center; color:#7c6a55}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap brand">
+      <img src="./logo.png" alt="ตราโรงเรียน" onerror="this.style.visibility='hidden'">
+      <div>
+        <h1>ระบบเติมชื่อเชิญเข้าเรียน <small>โรงเรียนบวรหัสดินทรวงศ์</small></h1>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="grid">
+      <section class="card" aria-labelledby="previewHdr">
+        <h2 id="previewHdr">ตัวอย่างภาพที่จะดาวน์โหลด</h2>
+        <canvas id="card" aria-label="ภาพตัวอย่างบัตรเชิญ"></canvas>
+        <p class="small">หมายเหตุ: สามารถเลื่อนตำแหน่งตัวอักษรให้ตรงกับคำว่า “เรียน.” ด้วยสไลเดอร์ด้านขวา</p>
+      </section>
+
+      <section class="card" aria-labelledby="controlHdr">
+        <h2 id="controlHdr">ตั้งค่าข้อความ</h2>
+        <label for="fullname">พิมพ์ชื่อ–สกุล นักเรียน</label>
+        <input id="fullname" type="text" placeholder="เช่น นายสมชาย ใจดี" autocomplete="off" />
+
+        <div class="row" style="margin-top:10px">
+          <div>
+            <label for="size">ขนาดอักษร: <span id="sizeVal">48</span> px</label>
+            <input id="size" type="range" min="28" max="80" value="48" />
+          </div>
+          <div>
+            <label for="weight">ความหนา: <span id="wVal">700</span></label>
+            <input id="weight" type="range" min="400" max="900" value="700" step="50" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:6px">
+          <div>
+            <label for="x">ตำแหน่งแนวนอน (X): <span id="xVal">200</span> px</label>
+            <input id="x" type="range" min="0" max="2000" value="200" />
+          </div>
+          <div>
+            <label for="y">ตำแหน่งแนวตั้ง (Y): <span id="yVal">520</span> px</label>
+            <input id="y" type="range" min="0" max="2000" value="520" />
+          </div>
+        </div>
+        <p class="hint">ค่ามาตรฐาน X/Y ถูกตั้งไว้ประมาณตำแหน่งหลังคำว่า “เรียน.” ของภาพตัวอย่าง หากไม่ตรง ให้เลื่อนปรับให้พอดี</p>
+
+        <div class="row">
+          <div>
+            <label for="color">สีตัวอักษร</label>
+            <input id="color" type="color" value="#3b2b2b" />
+          </div>
+          <div>
+            <label for="shadow">เงา (ความเข้ม)</label>
+            <input id="shadow" type="range" min="0" max="0.6" value="0.2" step="0.05" />
+          </div>
+        </div>
+
+        <div class="btns">
+          <button class="btn-ghost" id="reset">รีเซ็ตค่าเริ่มต้น</button>
+          <button class="btn-primary" id="download">ดาวน์โหลดภาพ (.png)</button>
+        </div>
+        <p class="small">ไฟล์ที่ได้จะเป็น PNG ขนาดเท่าภาพต้นฉบับ</p>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    © โรงเรียนบวรหัสดินทรวงศ์ — หน้าเว็บสำหรับใช้งานภายใน
+  </footer>
+
+  <script>
+    // ====== อ้างอิงองค์ประกอบ ======
+    const canvas = document.getElementById('card');
+    const ctx = canvas.getContext('2d');
+    const nameInput = document.getElementById('fullname');
+
+    const size = document.getElementById('size');
+    const x = document.getElementById('x');
+    const y = document.getElementById('y');
+    const weight = document.getElementById('weight');
+    const color = document.getElementById('color');
+    const shadow = document.getElementById('shadow');
+
+    const sizeVal = document.getElementById('sizeVal');
+    const xVal = document.getElementById('xVal');
+    const yVal = document.getElementById('yVal');
+    const wVal = document.getElementById('wVal');
+
+    const downloadBtn = document.getElementById('download');
+    const resetBtn = document.getElementById('reset');
+
+    // ====== โหลดภาพพื้นหลัง ======
+    const bg = new Image();
+    bg.src = './bg.jpg'; // วางไฟล์ bg.jpg ไว้ข้าง ๆ index.html
+
+    // ค่าเริ่มต้น (เดาให้อยู่แถว ๆ คำว่า "เรียน.")
+    const defaults = { x: 200, y: 520, size: 48, weight: 700, color: '#3b2b2b', shadow: 0.2 };
+
+    function setDefaults(){
+      nameInput.value = '';
+      x.value = defaults.x; y.value = defaults.y; size.value = defaults.size; weight.value = defaults.weight; color.value = defaults.color; shadow.value = defaults.shadow;
+      syncLabels();
+      draw();
+    }
+
+    function syncLabels(){
+      sizeVal.textContent = size.value;
+      xVal.textContent = x.value;
+      yVal.textContent = y.value;
+      wVal.textContent = weight.value;
+    }
+
+    async function loadFont(){
+      try{
+        await document.fonts.load(`${size.value}px "JS Chanok"`);
+      }catch(e){ console.warn('โหลดฟอนต์ไม่สำเร็จ แต่จะลองวาดต่อไป', e); }
+    }
+
+    function draw(){
+      if(!bg.complete) return; // ยังโหลดภาพไม่เสร็จ
+
+      // ตั้งขนาดแคนวาสให้เท่ากับภาพจริง เพื่อความคมชัดสูงสุด
+      canvas.width = bg.naturalWidth; 
+      canvas.height = bg.naturalHeight;
+
+      // วาดพื้นหลัง
+      ctx.clearRect(0,0,canvas.width, canvas.height);
+      ctx.drawImage(bg, 0, 0);
+
+      // ตั้งค่าฟอนต์
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = color.value || '#3b2b2b';
+      ctx.font = `${weight.value} ${size.value}px "JS Chanok", "Noto Sans Thai", sans-serif`;
+
+      // เพิ่มเส้นสโต๊กจาง ๆ เพื่อให้อ่านง่ายบนกระดาษ
+      const s = parseFloat(shadow.value || 0);
+      ctx.shadowColor = `rgba(0,0,0,${s})`;
+      ctx.shadowBlur = s>0 ? 2 : 0;
+      ctx.shadowOffsetX = s>0 ? 1 : 0;
+      ctx.shadowOffsetY = s>0 ? 1 : 0;
+
+      // วาดข้อความ
+      const text = nameInput.value.trim() || 'พิมพ์ชื่อ–สกุล ที่นี่';
+      ctx.fillText(text, parseInt(x.value,10), parseInt(y.value,10));
+
+      // ปิดเงาหลังวาดเสร็จ
+      ctx.shadowColor = 'transparent';
+    }
+
+    // อีเวนต์
+    [nameInput, size, x, y, weight, color, shadow].forEach(el=>{
+      el.addEventListener('input', ()=>{ syncLabels(); draw(); });
+    });
+
+    resetBtn.addEventListener('click', ()=>{ setDefaults(); });
+
+    downloadBtn.addEventListener('click', ()=>{
+      // สร้างลิงก์ดาวน์โหลด PNG
+      const a = document.createElement('a');
+      const name = (nameInput.value.trim() || 'บัตรเชิญ').replace(/\s+/g,'_');
+      a.download = `${name}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    });
+
+    // เริ่มต้นเมื่อทุกอย่างพร้อม
+    Promise.all([
+      new Promise(res=>{ bg.onload = res; bg.onerror = res; }),
+      loadFont()
+    ]).then(()=>{ setDefaults(); draw(); });
+  </script>
+</body>
+</html>
